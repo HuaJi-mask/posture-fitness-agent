@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>体态矫正和健身计划智能体</title>
+    <link rel="stylesheet" href="/static/style.css">
+        <!-- Markdown 渲染（已本地化到 vendor/：jsdelivr CDN 在国内网络经常加载
+             失败，CDN 挂了 marked/DOMPurify 就是 undefined，页面会直接报错） -->
+    <script src="/static/vendor/marked.min.js"></script>
+    <script src="/static/vendor/purify.min.js"></script>
+</head>
+<body>
+    <!-- 左侧边栏 -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <button class="new-chat-btn" onclick="createNewSession()">
+                <span>+</span> 新建对话
+            </button>
+        </div>
+        <div class="session-list" id="sessionList"></div>
+        <div class="sidebar-footer">
+            共 <span id="sessionCount">0</span> 个对话
+        </div>
+    </div>
+
+    <!-- 右侧主区域 -->
+    <div class="main-area">
+        <div class="header">
+            <h1>🏋️ 体态矫正和健身计划智能体</h1>
+            <p>多 Agent 协作 · RAG 增强 · 双验证机制</p>
+        </div>
+
+        <div class="chat-container">
+            <div class="chat-inner" id="chatInner"></div>
+        </div>
+
+        <div class="input-container">
+            <div class="input-wrapper">
+                <div class="input-box">
+                    <textarea 
+                        id="messageInput" 
+                        placeholder="输入你的问题..." 
+                        rows="1"
+                    ></textarea>
+                </div>
+                <button class="send-btn" id="sendBtn">发送</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+name: posture-fitness-agent
+
+services:
+  posture-fitness-agent:
+    build: .
+    container_name: posture-fitness-agent
+    ports: 
+      - 8000:8000
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_API_BASE_URL}
+      - MODEL_NAME=${MODEL_NAME}
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

@@ -1,0 +1,64 @@
+# ==================== Python ====================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ==================== Virtual Environment ====================
+venv/
+.venv/
+env/
+ENV/
+
+# ==================== Environment Variables ====================
+.env
+.env.local
+.env.*.local
+
+# ==================== IDE ====================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ==================== OS ====================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ==================== Data & Models ====================
+data/faiss_index/
+data/app.db
+data/evaluation/*.json
+*.pkl
+*.faiss
+*.index
+
+# HuggingFace 缓存（本地模型）
+.cache/
+models/
+
+# ==================== Logs ====================
+*.log
+logs/
+server_test.log
+
+# ==================== Temporary Files ====================
+temp/
+tmp/
+*.tmp
+*.bak
+
+# ==================== Temporary Dataset ====================
+temp_exercises_dataset/
+
+# ==================== Documentation ====================
+# 不上传个人笔记（可选）
+# 开发笔记.md
+# 健身和体态矫正训练规划智能体-开发文档.md
+# 健身和体态矫正训练规划智能体项目规划.docx
