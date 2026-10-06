@@ -363,17 +363,19 @@ async function sendMessage() {
         const decoder = new TextDecoder();
         let buffer = "";
         let lastContent = "";            // 最近一次回复内容（用于更新会话摘要）
-        // 最终输出节点白名单：只有这些节点完成时才显示用户可见的回复气泡。
-        // 中间节点（体态/健身专家、验证器、导诊）的 token 流不渲染成气泡，
-        // 只通过 status 事件展示进度——多 Agent 流式输出的主流做法（中间过程
-        // 折叠为状态，最终回复统一交付），避免 both 并行时出现多个对话框。
-        // 注意：plan_generator 必须在白名单里——辩论链中方案生成后立即进入
-        // 验证，若被当作中间节点，用户将永远看不到方案全文
+        let streamingContentDiv = null;   // 当前正在流式渲染的消息气泡
+        let streamingText = "";           // 当前流式累积的纯文本
+
+        // 最终输出节点白名单：只有这些节点的 token 会流式渲染成用户可见的气泡。
+        // 导诊/验证器等中间节点的 token 不显示，只通过 status 事件展示进度。
+        // 体态/健身专家是实际生成内容的节点，它们的 token 就是最终回复的来源。
         const FINAL_OUTPUT_NODES = new Set([
-            "merge_expert_responses",  // 问诊汇聚（both 并行/单专家的最终回复）
-            "plan_generator",          // 方案生成（辩论链的核心交付物）
-            "plan_adjuster",           // 方案调整后的最终回复
-            "merge_validation",        // 方案验证整合后的最终回复
+            "posture_expert",          // 体态专家
+            "fitness_expert",          // 健身专家
+            "merge_expert_responses",  // 问诊汇聚（兜底）
+            "plan_generator",          // 方案生成
+            "plan_adjuster",           // 方案调整
+            "merge_validation",        // 验证结果整合
         ]);
 
         // 处理一个完整的 SSE 事件（格式：data: {...}\n\n）
@@ -389,25 +391,62 @@ async function sendMessage() {
                 return;
             }
 
+            // 调试日志：打印所有收到的事件
+            console.log("SSE 事件:", data.type, data.node, data.token ? data.token.substring(0, 20) : "");
+
             if (data.type === "status") {
                 // 节点开始：更新进度状态（"体态专家分析中..."→"整合专家回复中"）
                 updateStatus(NODE_NAMES[data.node] || `${data.node} 处理中...`);
             } else if (data.type === "node") {
-                // 节点完成：只有最终输出节点才显示回复气泡（addMessage 自带打字机效果）。
-                // 中间节点的完整回复只记录摘要，不渲染成气泡
+                // 节点完成：只有最终汇聚节点才用完整回复重新渲染（兜底/修正格式）
+                // 单专家节点已经在 token 阶段流式渲染过了，这里不重复创建气泡
                 if (FINAL_OUTPUT_NODES.has(data.node) && data.data?.response) {
                     removeStatus();
-                    addMessage("assistant", data.data.response);
                     lastContent = data.data.response;
+
+                    // 只有汇聚类节点（merge_expert_responses / plan_generator 等）
+                    // 才需要重新渲染完整内容；专家节点已经流式显示过了
+                    const AGGREGATOR_NODES = new Set([
+                        "merge_expert_responses",
+                        "plan_generator",
+                        "plan_adjuster",
+                        "merge_validation"
+                    ]);
+
+                    if (AGGREGATOR_NODES.has(data.node)) {
+                        if (streamingContentDiv) {
+                            // 正在流式渲染：用完整内容重新渲染 Markdown
+                            if (typeof marked !== "undefined" && typeof DOMPurify !== "undefined") {
+                                streamingContentDiv.innerHTML = DOMPurify.sanitize(marked.parse(data.data.response));
+                            } else {
+                                streamingContentDiv.textContent = data.data.response;
+                            }
+                            streamingContentDiv = null;
+                            streamingText = "";
+                        } else {
+                            // 没有流式过：直接 addMessage
+                            addMessage("assistant", data.data.response);
+                        }
+                    }
+                    // 专家节点（posture_expert/fitness_expert）已经在 token 阶段
+                    // 流式渲染过了，这里不重复创建气泡
                 } else if (data.data?.response) {
                     // 非最终节点（验证器、导诊等）：只记录摘要，不显示气泡
                     lastContent = data.data.response;
                 }
             } else if (data.type === "token") {
-                // Token 事件：忽略，不创建气泡。
-                // 中间节点的 LLM token 流是"过程数据"，由最终输出节点统一交付。
-                // 后端仍会发送 token 事件；若以后想给最终节点做真实流式（而非
-                // 模拟打字机），可在此按 data.node 过滤，只渲染白名单节点的 token
+                // Token 事件：只对最终输出节点做流式渲染
+                if (FINAL_OUTPUT_NODES.has(data.node) && data.token) {
+                    if (!streamingContentDiv) {
+                        // 第一次收到 token：创建空气泡
+                        streamingContentDiv = addMessage("assistant", "");
+                        removeStatus();
+                    }
+                    streamingText += data.token;
+                    // 流式阶段先用纯文本，完成后再渲染 Markdown
+                    streamingContentDiv.textContent = streamingText;
+                    scrollToBottom();
+                }
             } else if (data.type === "done") {
                 removeStatus();
                 if (!lastContent) {
